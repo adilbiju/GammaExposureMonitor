@@ -6,7 +6,7 @@ import type { ConnectionStatus, ContractExposure, GexResponse } from "./types";
 
 const CALL_COLOR = "#4f9fe8";
 const PUT_COLOR = "#e1685c";
-const SPOT_COLOR = "#d6a94d";
+const SPOT_COLOR = "#42c6b7";
 const GRID_COLOR = "#252b33";
 const DISPLAY_MONEYNESS_RANGE = 0.10;
 
@@ -216,7 +216,7 @@ export default function App() {
   );
 
   const heatmap = useMemo(() => {
-    if (!data) return { expirations: [] as string[], rows: [] as { strike: number; values: number[]; net: number; isSpot: boolean }[], maximum: 0 };
+    if (!data) return { expirations: [] as string[], rows: [] as { strike: number; values: number[]; net: number; isSpot: boolean; isMaximum: boolean }[], maximum: 0 };
 
     const expirations = data.selected_expirations;
     const buckets = new Map<number, Map<string, number>>();
@@ -238,10 +238,15 @@ export default function App() {
     const nearestStrike = strikes[nearestIndex];
     const rows = visibleStrikes.map((strike) => {
       const values = expirations.map((expiration) => buckets.get(strike)?.get(expiration) ?? 0);
-      return { strike, values, net: values.reduce((sum, value) => sum + value, 0), isSpot: strike === nearestStrike };
+      return { strike, values, net: values.reduce((sum, value) => sum + value, 0), isSpot: strike === nearestStrike, isMaximum: false };
     });
-    const maximum = Math.max(0, ...rows.flatMap((row) => [...row.values, row.net]).map(Math.abs));
-    return { expirations, rows, maximum };
+    const maximumRowIndex = rows.reduce(
+      (largest, row, index) => Math.abs(row.net) > Math.abs(rows[largest].net) ? index : largest,
+      0,
+    );
+    const markedRows = rows.map((row, index) => ({ ...row, isMaximum: index === maximumRowIndex }));
+    const maximum = Math.max(0, ...markedRows.flatMap((row) => [...row.values, row.net]).map(Math.abs));
+    return { expirations, rows: markedRows, maximum };
   }, [data]);
 
   const connected = Boolean(status?.connected);
@@ -355,7 +360,7 @@ export default function App() {
                     <div className="heatmap-shell">
                       <div className="heatmap-key">
                         <span>NET GEX · $ / 1% MOVE</span>
-                        <div><i className="negative" /> NEGATIVE <i className="neutral" /> LOW <i className="positive" /> POSITIVE</div>
+                        <div><i className="negative" /> NEGATIVE <i className="neutral" /> LOW <i className="positive" /> POSITIVE <i className="maximum" /> MAX |NET|</div>
                       </div>
                       <div
                         className="heatmap-grid heatmap-heading"
@@ -369,12 +374,15 @@ export default function App() {
                         {heatmap.rows.map((row) => (
                           <div
                             key={row.strike}
-                            className={`heatmap-grid heatmap-row ${row.isSpot ? "spot-row" : ""}`}
+                            className={`heatmap-grid heatmap-row ${row.isSpot ? "spot-row" : ""} ${row.isMaximum ? "maximum-row" : ""}`}
                             style={{ gridTemplateColumns: `94px repeat(${heatmap.expirations.length}, minmax(74px, 1fr)) 104px` }}
                           >
                             <div className="heatmap-strike">
                               <b>{row.strike.toFixed(2)}</b>
-                              {row.isSpot && <small>SPOT {data.spot.toFixed(2)}</small>}
+                              <span className="heatmap-row-labels">
+                                {row.isSpot && <small>SPOT {data.spot.toFixed(2)}</small>}
+                                {row.isMaximum && <small className="maximum-label">MAX |NET|</small>}
+                              </span>
                             </div>
                             {row.values.map((value, index) => (
                               <div
@@ -386,7 +394,11 @@ export default function App() {
                                 {compactMoney(value)}
                               </div>
                             ))}
-                            <div className="heatmap-cell heatmap-net" style={{ background: heatColor(row.net, heatmap.maximum) }} title={`Net at $${row.strike.toFixed(2)} · ${compactMoney(row.net)}`}>
+                            <div
+                              className={`heatmap-cell heatmap-net ${row.isMaximum ? "maximum-net" : ""}`}
+                              style={{ background: row.isMaximum ? undefined : heatColor(row.net, heatmap.maximum) }}
+                              title={`Net at $${row.strike.toFixed(2)} · ${compactMoney(row.net)}${row.isMaximum ? " · Largest absolute net GEX shown" : ""}`}
+                            >
                               {compactMoney(row.net)}
                             </div>
                           </div>
