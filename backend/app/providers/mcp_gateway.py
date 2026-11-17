@@ -158,6 +158,9 @@ class McpGateway:
 
         return await self._with_client(operation)
 
+    async def with_client(self, operation):
+        return await self._with_client(operation)
+
     def disconnect(self) -> None:
         self.storage.clear()
         self.connected = False

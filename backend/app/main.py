@@ -97,7 +97,7 @@ async def gex(
 ) -> GexResponse:
     provider = demo_provider if settings.data_mode.lower() == "demo" else mcp_provider
     try:
-        snapshot = await provider.snapshot(symbol.upper())
+        snapshot = await provider.snapshot(symbol.upper(), expirations)
         return calculate_gex(snapshot, expirations, settings.risk_free_rate)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

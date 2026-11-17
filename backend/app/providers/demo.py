@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from app.calculations.gex import black_scholes_gamma
 from app.models import MarketSnapshot, OptionContract
@@ -13,7 +13,9 @@ class DemoProvider:
 
     BASE = {"SPY": (598.42, 596.78), "QQQ": (526.18, 523.90), "SPX": (6900.0, 6874.0)}
 
-    async def snapshot(self, symbol: str) -> MarketSnapshot:
+    async def snapshot(
+        self, symbol: str, selected_expirations: list[date] | None = None
+    ) -> MarketSnapshot:
         symbol = symbol.upper()
         spot, previous = self.BASE.get(symbol, (100.0, 99.4))
         now = datetime.now(timezone.utc)
@@ -61,12 +63,14 @@ class DemoProvider:
                             mark=mark,
                         )
                     )
+        selected = set(selected_expirations or expirations[:1])
         return MarketSnapshot(
             symbol=symbol,
             spot=spot,
             previous_close=previous,
             as_of=now,
-            contracts=contracts,
+            available_expirations=expirations,
+            contracts=[contract for contract in contracts if contract.expiration in selected],
             source="Demo snapshot",
         )
 

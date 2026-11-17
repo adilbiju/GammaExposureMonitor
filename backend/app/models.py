@@ -10,6 +10,7 @@ class OptionContract(BaseModel):
     expiration: date
     strike: float
     option_type: Literal["call", "put"]
+    contract_multiplier: float = 100
     gamma: float = 0
     implied_volatility: float = 0
     open_interest: int = 0
@@ -24,6 +25,7 @@ class MarketSnapshot(BaseModel):
     spot: float
     previous_close: float | None = None
     as_of: datetime
+    available_expirations: list[date] = Field(default_factory=list)
     contracts: list[OptionContract]
     source: str
 

@@ -14,7 +14,6 @@ from app.models import (
     StrikeExposure,
 )
 
-CONTRACT_MULTIPLIER = 100
 ONE_PERCENT_MOVE = 0.01
 NEW_YORK = ZoneInfo("America/New_York")
 
@@ -24,7 +23,7 @@ def contract_gex(contract: OptionContract, spot: float, gamma: float | None = No
     return (
         (contract.gamma if gamma is None else gamma)
         * contract.open_interest
-        * CONTRACT_MULTIPLIER
+        * contract.contract_multiplier
         * spot
         * spot
         * ONE_PERCENT_MOVE
@@ -64,8 +63,9 @@ def calculate_gex(
     selected_expirations: list[date] | None = None,
     risk_free_rate: float = 0.045,
 ) -> GexResponse:
-    expirations = sorted({contract.expiration for contract in snapshot.contracts})
-    selected = sorted(set(selected_expirations or expirations))
+    contract_expirations = sorted({contract.expiration for contract in snapshot.contracts})
+    expirations = sorted(set(snapshot.available_expirations) | set(contract_expirations))
+    selected = sorted(set(selected_expirations or contract_expirations))
     contracts = [contract for contract in snapshot.contracts if contract.expiration in selected]
 
     strike_buckets: dict[float, dict[str, float]] = defaultdict(lambda: {"call": 0.0, "put": 0.0})

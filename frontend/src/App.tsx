@@ -8,6 +8,7 @@ const CALL_COLOR = "#4f9fe8";
 const PUT_COLOR = "#e1685c";
 const SPOT_COLOR = "#d6a94d";
 const GRID_COLOR = "#252b33";
+const DISPLAY_MONEYNESS_RANGE = 0.10;
 
 const plotConfig = {
   responsive: true,
@@ -83,7 +84,7 @@ export default function App() {
     try {
       const result = await getGex(ticker, expirations.length ? expirations : undefined);
       setData(result);
-      if (!expirations.length) setSelectedExpirations(result.expirations);
+      if (!expirations.length) setSelectedExpirations(result.selected_expirations);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load GEX data.");
     } finally {
@@ -181,19 +182,37 @@ export default function App() {
     ? chainExpiration
     : data?.selected_expirations[0] ?? "";
 
+  const displayedContracts = useMemo(() => {
+    if (!data) return [];
+    const minimumStrike = data.spot * (1 - DISPLAY_MONEYNESS_RANGE);
+    const maximumStrike = data.spot * (1 + DISPLAY_MONEYNESS_RANGE);
+    return data.contracts.filter(
+      (contract) => contract.strike >= minimumStrike && contract.strike <= maximumStrike,
+    );
+  }, [data]);
+
+  const displayedStrikeExposure = useMemo(() => {
+    if (!data) return [];
+    const minimumStrike = data.spot * (1 - DISPLAY_MONEYNESS_RANGE);
+    const maximumStrike = data.spot * (1 + DISPLAY_MONEYNESS_RANGE);
+    return data.strike_exposure.filter(
+      (row) => row.strike >= minimumStrike && row.strike <= maximumStrike,
+    );
+  }, [data]);
+
   const visibleContracts = useMemo(() => {
     if (!data) return [];
     const query = tableQuery.trim().toLowerCase();
-    return data.contracts
+    return displayedContracts
       .filter((contract) => contract.option_type === typeFilter)
       .filter((contract) => contract.expiration === activeChainExpiration)
       .filter((contract) => !query || contract.expiration.includes(query) || contract.strike.toString().includes(query) || contract.option_type.includes(query))
       .slice(0, 240);
-  }, [activeChainExpiration, data, tableQuery, typeFilter]);
+  }, [activeChainExpiration, data, displayedContracts, tableQuery, typeFilter]);
 
   const typeContractCount = useMemo(
-    () => data?.contracts.filter((contract) => contract.option_type === typeFilter && contract.expiration === activeChainExpiration).length ?? 0,
-    [activeChainExpiration, data, typeFilter],
+    () => displayedContracts.filter((contract) => contract.option_type === typeFilter && contract.expiration === activeChainExpiration).length,
+    [activeChainExpiration, displayedContracts, typeFilter],
   );
 
   const heatmap = useMemo(() => {
@@ -231,10 +250,9 @@ export default function App() {
   return (
     <div className="terminal-shell">
       <header className="app-header">
-        <div className="wordmark"><b>GEX</b><span>MONITOR</span></div>
-        <nav><button className="active">Exposure</button><button>Options chain</button></nav>
+        <div className="wordmark">GEX MONITOR</div>
         <div className="header-right">
-          <span className={`feed-status ${connected ? "online" : ""}`}><i /> {status?.mode === "demo" ? "DEMO FEED" : connected ? "ROBINHOOD MCP" : "FEED OFFLINE"}</span>
+          <span className={`feed-status ${connected ? "online" : ""}`}>{status?.mode === "demo" ? "DEMO FEED" : connected ? "ROBINHOOD MCP" : "FEED OFFLINE"}</span>
           {status?.mode === "mcp" && (connected ? (
             <button className="text-action" onClick={handleDisconnect}><Unplug size={13} /> Disconnect</button>
           ) : (
@@ -258,7 +276,7 @@ export default function App() {
           <div className="quick-control">
             <span className="control-label">Quick</span>
             <div className="button-group">
-              {["SPY", "QQQ", "SPX"].map((ticker) => <button key={ticker} className={symbol === ticker ? "active" : ""} onClick={() => chooseSymbol(ticker)}>{ticker}</button>)}
+              {["SPY", "QQQ"].map((ticker) => <button key={ticker} className={symbol === ticker ? "active" : ""} onClick={() => chooseSymbol(ticker)}>{ticker}</button>)}
             </div>
           </div>
 
@@ -319,17 +337,17 @@ export default function App() {
                   {data && chartMode === "strikes" && (
                     <Plot
                       data={[
-                        { type: "bar", name: "Call", x: data.strike_exposure.map((row) => row.strike), y: data.strike_exposure.map((row) => row.call_gex), marker: { color: CALL_COLOR }, hovertemplate: "$%{x:.2f}<br>Call %{y:$.3s}<extra></extra>" },
-                        { type: "bar", name: "Put", x: data.strike_exposure.map((row) => row.strike), y: data.strike_exposure.map((row) => row.put_gex), marker: { color: PUT_COLOR }, hovertemplate: "$%{x:.2f}<br>Put %{y:$.3s}<extra></extra>" },
+                        { type: "bar", name: "Call", x: displayedStrikeExposure.map((row) => row.strike), y: displayedStrikeExposure.map((row) => row.call_gex), marker: { color: CALL_COLOR }, hovertemplate: "$%{x:.2f}<br>Call %{y:$.3s}<extra></extra>" },
+                        { type: "bar", name: "Put", x: displayedStrikeExposure.map((row) => row.strike), y: displayedStrikeExposure.map((row) => row.put_gex), marker: { color: PUT_COLOR }, hovertemplate: "$%{x:.2f}<br>Put %{y:$.3s}<extra></extra>" },
                       ]}
-                      layout={{ autosize: true, barmode: "relative", paper_bgcolor: "transparent", plot_bgcolor: "transparent", margin: { l: 64, r: 20, t: 34, b: 48 }, font: { color: "#87909a", family: "DM Mono", size: 10 }, xaxis: { title: { text: "STRIKE", font: { size: 9 } }, gridcolor: GRID_COLOR, zeroline: false, tickprefix: "$" }, yaxis: { title: { text: "GEX / 1%", font: { size: 9 } }, gridcolor: GRID_COLOR, zerolinecolor: "#59616c", tickformat: "$.2s" }, legend: { orientation: "h", x: 0, y: 1.08, font: { size: 10 } }, bargap: 0.18, shapes: [{ type: "line", x0: data.spot, x1: data.spot, y0: 0, y1: 1, yref: "paper", line: { color: SPOT_COLOR, width: 1, dash: "dot" } }] }}
+                      layout={{ autosize: true, barmode: "relative", paper_bgcolor: "transparent", plot_bgcolor: "transparent", margin: { l: 64, r: 20, t: 34, b: 48 }, font: { color: "#87909a", family: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif", size: 10 }, xaxis: { title: { text: "STRIKE", font: { size: 9 } }, gridcolor: GRID_COLOR, zeroline: false, tickprefix: "$" }, yaxis: { title: { text: "GEX / 1%", font: { size: 9 } }, gridcolor: GRID_COLOR, zerolinecolor: "#59616c", tickformat: "$.2s" }, legend: { orientation: "h", x: 0, y: 1.08, font: { size: 10 } }, bargap: 0.18, shapes: [{ type: "line", x0: data.spot, x1: data.spot, y0: 0, y1: 1, yref: "paper", line: { color: SPOT_COLOR, width: 1, dash: "dot" } }] }}
                       config={plotConfig} useResizeHandler style={{ width: "100%", height: "100%" }}
                     />
                   )}
                   {data && chartMode === "profile" && (
                     <Plot
                       data={[{ type: "scatter", mode: "lines", name: "Net GEX", x: data.gamma_profile.map((point) => point.spot), y: data.gamma_profile.map((point) => point.net_gex), line: { color: CALL_COLOR, width: 2 }, fill: "tozeroy", fillcolor: "rgba(79, 159, 232, 0.08)", hovertemplate: "$%{x:.2f}<br>%{y:$.3s}<extra></extra>" }]}
-                      layout={{ autosize: true, paper_bgcolor: "transparent", plot_bgcolor: "transparent", margin: { l: 64, r: 20, t: 34, b: 48 }, font: { color: "#87909a", family: "DM Mono", size: 10 }, xaxis: { title: { text: "SIMULATED SPOT", font: { size: 9 } }, gridcolor: GRID_COLOR, zeroline: false, tickprefix: "$" }, yaxis: { title: { text: "NET GEX", font: { size: 9 } }, gridcolor: GRID_COLOR, zerolinecolor: "#59616c", tickformat: "$.2s" }, showlegend: false, shapes: [{ type: "line", x0: data.spot, x1: data.spot, y0: 0, y1: 1, yref: "paper", line: { color: SPOT_COLOR, width: 1, dash: "dot" } }, ...(data.zero_gamma ? [{ type: "line" as const, x0: data.zero_gamma, x1: data.zero_gamma, y0: 0, y1: 1, yref: "paper", line: { color: PUT_COLOR, width: 1, dash: "dash" } }] : [])] }}
+                      layout={{ autosize: true, paper_bgcolor: "transparent", plot_bgcolor: "transparent", margin: { l: 64, r: 20, t: 34, b: 48 }, font: { color: "#87909a", family: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif", size: 10 }, xaxis: { title: { text: "SIMULATED SPOT", font: { size: 9 } }, gridcolor: GRID_COLOR, zeroline: false, tickprefix: "$" }, yaxis: { title: { text: "NET GEX", font: { size: 9 } }, gridcolor: GRID_COLOR, zerolinecolor: "#59616c", tickformat: "$.2s" }, showlegend: false, shapes: [{ type: "line", x0: data.spot, x1: data.spot, y0: 0, y1: 1, yref: "paper", line: { color: SPOT_COLOR, width: 1, dash: "dot" } }, ...(data.zero_gamma ? [{ type: "line" as const, x0: data.zero_gamma, x1: data.zero_gamma, y0: 0, y1: 1, yref: "paper", line: { color: PUT_COLOR, width: 1, dash: "dash" } }] : [])] }}
                       config={plotConfig} useResizeHandler style={{ width: "100%", height: "100%" }}
                     />
                   )}

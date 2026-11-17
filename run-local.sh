@@ -27,6 +27,6 @@ cd "$PROJECT_DIR/frontend"
 ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 &
 FRONTEND_PID=$!
 
-echo "GEX Lab is starting at http://127.0.0.1:5173"
+echo "GEX Monitor is starting at http://127.0.0.1:5173"
 wait "$BACKEND_PID" "$FRONTEND_PID"
 
