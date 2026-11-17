@@ -18,7 +18,7 @@ gateway = McpGateway(settings)
 demo_provider = DemoProvider()
 mcp_provider = RobinhoodMcpProvider(gateway)
 
-app = FastAPI(title="GEX Lab API", version="0.1.0")
+app = FastAPI(title="GEX Monitor API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
@@ -78,7 +78,7 @@ async def mcp_callback(request: Request) -> HTMLResponse:
     return HTMLResponse(
         """
         <!doctype html><html><body style="font-family:system-ui;background:#09110f;color:#e7f0ea;padding:3rem">
-        <h1>Robinhood connected</h1><p>You can close this tab and return to GEX Lab.</p>
+        <h1>Robinhood connected</h1><p>You can close this tab and return to GEX Monitor.</p>
         <script>setTimeout(() => window.close(), 1200)</script></body></html>
         """
     )

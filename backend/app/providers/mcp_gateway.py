@@ -90,7 +90,7 @@ class McpGateway:
         return OAuthClientProvider(
             server_url=self.settings.mcp_server_url,
             client_metadata=OAuthClientMetadata(
-                client_name="GEX Lab",
+                client_name="GEX Monitor",
                 redirect_uris=[AnyUrl(self.settings.mcp_redirect_uri)],
                 scope=None,
             ),
