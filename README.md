@@ -11,6 +11,11 @@ A local options gamma-exposure dashboard built with FastAPI, React, Vite, and Pl
 - Robinhood Trading MCP connection over OAuth
 
 
+## Screenshots
+<img width="1297" height="679" alt="Screenshot 2026-11-17 at 11 00 35 AM" src="https://github.com/user-attachments/assets/7b4816f3-a1f1-4e1c-829d-4c838614f4bd" />
+<img width="1267" height="676" alt="Screenshot 2026-11-17 at 10 39 54 AM" src="https://github.com/user-attachments/assets/503ebb79-086e-4e74-85e5-56b59080e2df" />
+
+
 ## Local setup
 
 ### Backend
