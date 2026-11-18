@@ -268,6 +268,13 @@ export default function App() {
         </div>
       </header>
 
+      {loading && data && (
+        <div className="update-indicator" role="status" aria-live="polite" aria-label={`Updating ${symbol} data`}>
+          <span>UPDATING {symbol}</span>
+          <span className="update-dots" aria-hidden="true"><i /><i /><i /></span>
+        </div>
+      )}
+
       <main className="workspace">
         <section className="control-bar">
           <form className="symbol-control" onSubmit={submitSymbol}>
@@ -281,7 +288,7 @@ export default function App() {
           <div className="quick-control">
             <span className="control-label">Quick</span>
             <div className="button-group">
-              {["SPY", "QQQ"].map((ticker) => <button key={ticker} className={symbol === ticker ? "active" : ""} onClick={() => chooseSymbol(ticker)}>{ticker}</button>)}
+              {["SPY", "QQQ", "IWM"].map((ticker) => <button key={ticker} className={symbol === ticker ? "active" : ""} onClick={() => chooseSymbol(ticker)}>{ticker}</button>)}
             </div>
           </div>
 
