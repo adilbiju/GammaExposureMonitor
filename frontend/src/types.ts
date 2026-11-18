@@ -26,6 +26,21 @@ export interface ContractExposure {
   ask: number;
   mark: number;
   gex: number;
+  reported_gex: number;
+  model_gamma: number;
+  gamma_discrepancy_ratio: number | null;
+  excluded_from_aggregates: boolean;
+}
+
+export interface DataQualityImpact {
+  excluded_contract_count: number;
+  excluded_gex: number;
+  raw_total_call_gex: number;
+  raw_total_put_gex: number;
+  raw_net_gex: number;
+  raw_call_wall: number | null;
+  raw_put_wall: number | null;
+  raw_largest_gex_strike: number | null;
 }
 
 export interface GexResponse {
@@ -47,6 +62,7 @@ export interface GexResponse {
   strike_exposure: StrikeExposure[];
   gamma_profile: ProfilePoint[];
   contracts: ContractExposure[];
+  data_quality: DataQualityImpact;
   calculation_note: string;
 }
 

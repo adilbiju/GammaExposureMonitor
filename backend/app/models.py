@@ -44,6 +44,21 @@ class ProfilePoint(BaseModel):
 
 class ContractExposure(OptionContract):
     gex: float
+    reported_gex: float
+    model_gamma: float
+    gamma_discrepancy_ratio: float | None = None
+    excluded_from_aggregates: bool = False
+
+
+class DataQualityImpact(BaseModel):
+    excluded_contract_count: int = 0
+    excluded_gex: float = 0
+    raw_total_call_gex: float = 0
+    raw_total_put_gex: float = 0
+    raw_net_gex: float = 0
+    raw_call_wall: float | None = None
+    raw_put_wall: float | None = None
+    raw_largest_gex_strike: float | None = None
 
 
 class GexResponse(BaseModel):
@@ -65,6 +80,7 @@ class GexResponse(BaseModel):
     strike_exposure: list[StrikeExposure]
     gamma_profile: list[ProfilePoint]
     contracts: list[ContractExposure]
+    data_quality: DataQualityImpact
     calculation_note: str = Field(
         default="Open-interest model: calls positive, puts negative; dollar gamma per 1% underlying move."
     )

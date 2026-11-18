@@ -315,6 +315,28 @@ export default function App() {
 
         {error && <div className="error-row"><CircleAlert size={14} />{error}</div>}
 
+        {data && data.data_quality.excluded_contract_count > 0 && (
+          <section className="quality-alert" role="status" aria-label="Market data quality adjustment">
+            <div className="quality-summary">
+              <CircleAlert size={15} />
+              <div>
+                <strong>FEED GREEK OUTLIER</strong>
+                <span>
+                  {data.data_quality.excluded_contract_count} {data.data_quality.excluded_contract_count === 1 ? "contract was" : "contracts were"} excluded from aggregates · reported impact {compactMoney(data.data_quality.excluded_gex)}
+                </span>
+              </div>
+            </div>
+            <div className="quality-impact-grid">
+              <div><span>NET GEX</span><b><del>{compactMoney(data.data_quality.raw_net_gex)}</del><i>→</i>{compactMoney(data.net_gex)}</b></div>
+              <div><span>CALL GEX</span><b><del>{compactMoney(data.data_quality.raw_total_call_gex)}</del><i>→</i>{compactMoney(data.total_call_gex)}</b></div>
+              <div><span>PUT GEX</span><b><del>{compactMoney(data.data_quality.raw_total_put_gex)}</del><i>→</i>{compactMoney(data.total_put_gex)}</b></div>
+              <div><span>CALL WALL</span><b><del>{price(data.data_quality.raw_call_wall)}</del><i>→</i>{price(data.call_wall)}</b></div>
+              <div><span>PUT WALL</span><b><del>{price(data.data_quality.raw_put_wall)}</del><i>→</i>{price(data.put_wall)}</b></div>
+              <div><span>LARGEST |GEX|</span><b><del>{price(data.data_quality.raw_largest_gex_strike)}</del><i>→</i>{price(data.largest_gex_strike)}</b></div>
+            </div>
+          </section>
+        )}
+
         {!connected && !loading ? (
           <section className="offline-panel">
             <span className="label">MARKET DATA</span><h1>No data feed connected</h1><p>Connect the Robinhood MCP to load equity quotes and options-chain data.</p>
@@ -454,8 +476,8 @@ export default function App() {
                 <table>
                   <thead><tr><th>Expiry</th><th>Type</th><th>Strike</th><th>Bid</th><th>Ask</th><th>IV</th><th>Gamma</th><th>Open interest</th><th>Volume</th><th>GEX / 1%</th></tr></thead>
                   <tbody>{visibleContracts.map((contract: ContractExposure) => (
-                    <tr key={contract.id}>
-                      <td>{shortExpiry(contract.expiration)}</td><td><span className={`type-marker ${contract.option_type}`}>{contract.option_type === "call" ? "C" : "P"}</span></td><td className="strong">${contract.strike.toFixed(2)}</td><td>${contract.bid.toFixed(2)}</td><td>${contract.ask.toFixed(2)}</td><td>{(contract.implied_volatility * 100).toFixed(1)}%</td><td>{contract.gamma.toFixed(5)}</td><td>{contract.open_interest.toLocaleString()}</td><td>{contract.volume.toLocaleString()}</td><td className={contract.gex >= 0 ? "number-positive" : "number-negative"}>{compactMoney(contract.gex)}</td>
+                    <tr key={contract.id} className={contract.excluded_from_aggregates ? "excluded-contract" : ""}>
+                      <td>{shortExpiry(contract.expiration)}</td><td><span className={`type-marker ${contract.option_type}`}>{contract.option_type === "call" ? "C" : "P"}</span></td><td className="strong">${contract.strike.toFixed(2)}</td><td>${contract.bid.toFixed(2)}</td><td>${contract.ask.toFixed(2)}</td><td>{(contract.implied_volatility * 100).toFixed(1)}%</td><td className={contract.excluded_from_aggregates ? "flagged-greek" : ""} title={contract.excluded_from_aggregates ? `Model gamma ${contract.model_gamma.toFixed(6)} · feed/model difference ${contract.gamma_discrepancy_ratio?.toFixed(1) ?? "extreme"}×` : undefined}>{contract.gamma.toFixed(5)}{contract.excluded_from_aggregates && <small>FLAG</small>}</td><td>{contract.open_interest.toLocaleString()}</td><td>{contract.volume.toLocaleString()}</td><td className={contract.reported_gex >= 0 ? "number-positive" : "number-negative"} title={contract.excluded_from_aggregates ? "Reported exposure excluded from dashboard aggregates" : undefined}>{compactMoney(contract.reported_gex)}{contract.excluded_from_aggregates && <small className="excluded-label">EXCLUDED</small>}</td>
                     </tr>
                   ))}</tbody>
                 </table>

@@ -208,6 +208,46 @@ class RobinhoodMcpProviderTests(unittest.IsolatedAsyncioTestCase):
             {"chain_symbol": "SPY"},
         )
 
+    def test_decimal_iv_above_three_is_not_divided_by_one_hundred(self):
+        contract = self.provider._normalize_contract(
+            {
+                "id": "high-iv",
+                "expiration_date": "2026-12-18",
+                "strike_price": "600",
+                "type": "put",
+                "quote": {
+                    "implied_volatility": "3.660396",
+                    "gamma": "0.002",
+                    "open_interest": 10,
+                },
+            },
+            "SPY",
+            0,
+        )
+
+        self.assertIsNotNone(contract)
+        self.assertAlmostEqual(contract.implied_volatility, 3.660396)
+
+    def test_explicit_percentage_iv_is_converted_to_decimal(self):
+        contract = self.provider._normalize_contract(
+            {
+                "id": "percentage-iv",
+                "expiration_date": "2026-12-18",
+                "strike_price": "600",
+                "type": "put",
+                "quote": {
+                    "implied_volatility_percentage": "366.0396",
+                    "gamma": "0.002",
+                    "open_interest": 10,
+                },
+            },
+            "SPY",
+            0,
+        )
+
+        self.assertIsNotNone(contract)
+        self.assertAlmostEqual(contract.implied_volatility, 3.660396)
+
     def test_expired_same_day_contract_is_not_selected_by_default(self):
         now = datetime(2026, 11, 16, 22, 0, tzinfo=timezone.utc)
 

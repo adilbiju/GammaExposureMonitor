@@ -282,9 +282,19 @@ class RobinhoodMcpProvider:
         bid = _number(_deep_find(record, {"bid", "bid_price"}))
         ask = _number(_deep_find(record, {"ask", "ask_price"}))
         mark = _number(_deep_find(record, {"mark", "mark_price", "mid_price"}), (bid + ask) / 2)
-        iv = _number(_deep_find(record, {"implied_volatility", "implied_volatility_percentage", "iv"}))
-        if iv > 3:
-            iv /= 100
+        quote = record.get("quote") if isinstance(record.get("quote"), dict) else record
+
+        # Robinhood's implied_volatility and iv fields are decimal values, including
+        # values above 3.0 (for example 3.66 means 366%). Only the explicitly named
+        # percentage field is expressed in percentage points.
+        decimal_iv = _deep_find(quote, {"implied_volatility", "iv"})
+        percentage_iv = _deep_find(quote, {"implied_volatility_percentage"})
+        if decimal_iv not in (None, ""):
+            iv = _number(decimal_iv)
+        elif percentage_iv not in (None, ""):
+            iv = _number(percentage_iv) / 100
+        else:
+            iv = 0
         return OptionContract(
             id=identifier,
             symbol=symbol,
@@ -295,10 +305,10 @@ class RobinhoodMcpProvider:
                 _deep_find(record, {"trade_value_multiplier", "contract_multiplier", "multiplier"}),
                 100,
             ),
-            gamma=_number(_deep_find(record, {"gamma"})),
+            gamma=_number(_deep_find(quote, {"gamma"})),
             implied_volatility=iv,
-            open_interest=_integer(_deep_find(record, {"open_interest", "openinterest"})),
-            volume=_integer(_deep_find(record, {"volume"})),
+            open_interest=_integer(_deep_find(quote, {"open_interest", "openinterest"})),
+            volume=_integer(_deep_find(quote, {"volume"})),
             bid=bid,
             ask=ask,
             mark=mark,
