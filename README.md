@@ -4,7 +4,7 @@ A local options gamma-exposure dashboard built with FastAPI, React, Vite, and Pl
 
 ## Features
 
-- One-symbol workflow optimized for SPY and QQQ
+- One-symbol workflow optimized for SPY, QQQ, and IWM
 - Expiration filtering and manual/60-second refresh
 - Net, call, and put GEX by strike
 - Call wall, put wall, and largest absolute GEX levels
